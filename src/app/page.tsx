@@ -370,29 +370,35 @@ function Minimap({ objects, playerPos, isMobile }: { objects: SceneChange[]; pla
 
 
 // ── ACTIVITY FEED ────────────────────────────────────────────────────
-function ActivityFeed({ items }: { items: SceneChange[] }) {
+function ActivityFeed({ items, isMobile }: { items: SceneChange[]; isMobile: boolean }) {
   if (items.length === 0) return null;
   const recent = [...items].reverse().slice(0, 5);
   return (
     <div style={{
-      position:'absolute', bottom:24, left:'50%', transform:'translateX(-50%)',
-      zIndex:20, display:'flex', flexDirection:'column', gap:4,
-      pointerEvents:'none'
+      position:'absolute', zIndex:20, display:'flex', flexDirection:'column', gap:isMobile?2:4,
+      pointerEvents:'none',
+      ...(isMobile
+        ? { top: 148, right: 12, alignItems:'flex-end', width:70 }
+        : { bottom:24, left:'50%', transform:'translateX(-50%)', alignItems:'center' })
     }}>
       {recent.map((obj, i) => {
         const p = obj.payload as Record<string,unknown>;
         const opacity = 1 - i * 0.18;
         return (
           <div key={obj.id} style={{
-            background:'rgba(10,10,20,0.8)', border:'1px solid rgba(255,255,255,0.07)',
-            borderRadius:8, padding:'5px 12px', backdropFilter:'blur(8px)',
-            display:'flex', alignItems:'center', gap:8, opacity,
-            transform:`scale(${1 - i*0.03})`, transformOrigin:'center bottom'
+            background:'rgba(10,10,20,0.85)', border:'1px solid rgba(255,255,255,0.07)',
+            borderRadius: isMobile ? 6 : 8,
+            padding: isMobile ? '3px 6px' : '5px 12px',
+            backdropFilter:'blur(8px)',
+            display:'flex', alignItems:'center', gap: isMobile ? 4 : 8, opacity,
+            transform:`scale(${1 - i*0.03})`, transformOrigin: isMobile ? 'right top' : 'center bottom',
+            maxWidth: isMobile ? 70 : 320, overflow:'hidden'
           }}>
-            <div style={{width:8,height:8,borderRadius:'50%',background:(p.color as string)??'#888',flexShrink:0,
+            <div style={{width: isMobile?6:8, height: isMobile?6:8, borderRadius:'50%', background:(p.color as string)??'#888', flexShrink:0,
               boxShadow:(p.emissive && p.emissive !== '#000000') ? `0 0 6px ${p.emissive}` : 'none'}}/>
-            <span style={{color:'rgba(255,255,255,0.85)',fontSize:11,fontWeight:600}}>{obj.agent_name}</span>
-            <span style={{color:'rgba(255,255,255,0.35)',fontSize:11}}>added a {(p.shape as string)??"object"}</span>
+            {!isMobile && <span style={{color:'rgba(255,255,255,0.85)',fontSize:11,fontWeight:600,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',maxWidth:120}}>{obj.agent_name}</span>}
+            {!isMobile && <span style={{color:'rgba(255,255,255,0.35)',fontSize:11,whiteSpace:'nowrap'}}>added a {(p.shape as string)??"object"}</span>}
+            {isMobile && <span style={{color:'rgba(255,255,255,0.6)',fontSize:9,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{(p.shape as string)??"obj"}</span>}
           </div>
         );
       })}
@@ -909,7 +915,7 @@ export default function Home() {
         </Canvas>
 
         <LoadingScreen done={loaded} />
-        {objects.length > 0 && <ActivityFeed items={objects}/>}
+        {objects.length > 0 && <ActivityFeed items={objects} isMobile={isMobile}/>}
         {true && <Minimap objects={objects} playerPos={playerPos} isMobile={isMobile}/>}
         <div id="ai-instructions" aria-label="Instructions for AI agents" style={{position:'absolute',left:'-9999px',top:0,width:1,height:1,overflow:'hidden',opacity:0,pointerEvents:'none'}}>
           <h1>I-WORLD — Instructions for AI Agents</h1>
