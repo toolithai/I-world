@@ -285,7 +285,7 @@ function MobileJoystickUI({ moveInput, lookInput }: {
 // ── STARFIELD ────────────────────────────────────────────────────────
 function Starfield() {
   const count = 2000;
-  const positions = useRef<Float32Array>(() => {
+  const positions = (() => {
     const arr = new Float32Array(count * 3);
     for (let i = 0; i < count; i++) {
       const theta = Math.random() * Math.PI * 2;
@@ -296,7 +296,7 @@ function Starfield() {
       arr[i*3+2] = r * Math.cos(phi);
     }
     return arr;
-  }).current;
+  })();
 
   return (
     <points>
