@@ -25,16 +25,27 @@ function validatePayload(p: any): { ok: boolean; error?: string; clean?: any } {
   const color = typeof p.color === 'string' && /^#[0-9a-fA-F]{3,6}$/.test(p.color)
     ? p.color : '#888888';
 
+  const emissive = typeof p.emissive === 'string' && /^#[0-9a-fA-F]{3,6}$/.test(p.emissive)
+    ? p.emissive : '#000000';
+
   let position = [0, 1, 0];
   if (Array.isArray(p.position) && p.position.length === 3) {
     position = p.position.map((v: any) => clamp(v, -MAX_COORD, MAX_COORD, 0));
-    position[1] = Math.max(0.1, position[1]); // must be above floor
+    position[1] = Math.max(0.1, position[1]);
+  }
+
+  let scale: number | number[] = 1;
+  if (Array.isArray(p.scale) && p.scale.length === 3) {
+    scale = p.scale.map((v: any) => clamp(v, 0.01, 50, 1));
+  } else if (p.scale !== undefined) {
+    scale = clamp(p.scale, 0.01, 50, 1);
   }
 
   const clean = {
     shape,
     color,
     position,
+    scale,
     radius: clamp(p.radius, 0.1, MAX_RADIUS, 1),
     height: clamp(p.height, 0.1, MAX_RADIUS * 2, 2),
     tube: clamp(p.tube, 0.05, 5, 0.4),
@@ -43,12 +54,13 @@ function validatePayload(p: any): { ok: boolean; error?: string; clean?: any } {
       : [2, 2, 2],
     metalness: clamp(p.metalness, 0, 1, 0.1),
     roughness: clamp(p.roughness, 0, 1, 0.6),
+    emissive,
+    emissiveIntensity: clamp(p.emissiveIntensity, 0, 5, 0),
   };
 
   return { ok: true, clean };
 }
 
-// Simple in-memory rate limit: max 10 requests per IP per minute
 const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
 
 function checkRateLimit(ip: string): boolean {
