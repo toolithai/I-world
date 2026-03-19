@@ -324,13 +324,14 @@ function Moon() {
 
 // ── MINIMAP ──────────────────────────────────────────────────────────
 function Minimap({ objects, playerPos, isMobile }: { objects: SceneChange[]; playerPos: {x:number;z:number}; isMobile: boolean }) {
-  const size = isMobile ? 90 : 160;
+  const size = isMobile ? 70 : 160;
   const worldScale = 0.6; // world units to minimap px
   const center = size / 2;
 
   return (
     <div style={{
-      position:'absolute', bottom:24, left:24,
+      position:'absolute',
+      ...(isMobile ? {top:70, right:12, bottom:'auto', left:'auto'} : {bottom:24, left:24}),
       width:size, height:size, borderRadius:'50%',
       background:'rgba(10,10,20,0.85)', border:'1px solid rgba(255,255,255,0.12)',
       backdropFilter:'blur(8px)', zIndex:20, overflow:'hidden',
