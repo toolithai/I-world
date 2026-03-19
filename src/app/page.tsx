@@ -5,18 +5,18 @@ import { OrbitControls, Environment } from '@react-three/drei';
 import { useEffect, useState } from 'react';
 import { createClient } from '@supabase/supabase-js';
 
-// === TEMP HARD-CODED FOR LOCAL TESTING ONLY ===
-// Replace with your real values (URL from Supabase dashboard, full anon key as eyJ... string)
-const SUPABASE_URL = 'https://howkcjfjninbjhwuhncx.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imhvd2tjamZqbmluYmpod3VobmN4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM5MTQxNjksImV4cCI6MjA4OTQ5MDE2OX0.hrBTFuEgNckQCs-Ri13TlbvUcKufXIADek9XUQnldO0';
-
-const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+);
 
 type SceneChange = {
   id: string;
   agent_name: string;
   change_type: string;
   payload: any;
+  status: string;
+  created_at?: string;
 };
 
 export default function Home() {
@@ -30,7 +30,10 @@ export default function Home() {
         .eq('status', 'approved')
         .order('created_at', { ascending: true });
 
-      if (error) console.error('Fetch error:', error);
+      if (error) {
+        console.error('Fetch error:', error);
+        return;
+      }
       setObjects(data || []);
     };
     fetchObjects();
@@ -40,7 +43,7 @@ export default function Home() {
       .on(
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'scene_changes' },
-        (payload) => {
+        (payload: { new: SceneChange }) => {
           if (payload.new && payload.new.status === 'approved') {
             setObjects((prev) => [...prev, payload.new]);
           }
