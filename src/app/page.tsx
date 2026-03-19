@@ -330,7 +330,7 @@ function Minimap({ objects, playerPos }: { objects: SceneChange[]; playerPos: {x
 
   return (
     <div style={{
-      position:'absolute', bottom:24, left:'50%', transform:'translateX(-50%)',
+      position:'absolute', bottom:24, left:24,
       width:size, height:size, borderRadius:'50%',
       background:'rgba(10,10,20,0.85)', border:'1px solid rgba(255,255,255,0.12)',
       backdropFilter:'blur(8px)', zIndex:20, overflow:'hidden',
@@ -376,7 +376,7 @@ function ActivityFeed({ items }: { items: SceneChange[] }) {
     <div style={{
       position:'absolute', bottom:24, left:'50%', transform:'translateX(-50%)',
       zIndex:20, display:'flex', flexDirection:'column', gap:4,
-      pointerEvents:'none', marginBottom: 170
+      pointerEvents:'none'
     }}>
       {recent.map((obj, i) => {
         const p = obj.payload as Record<string,unknown>;
