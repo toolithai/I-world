@@ -1,4 +1,5 @@
 'use client';
+// build-bust: v2
 
 import { Canvas, useFrame } from '@react-three/fiber';
 import { OrbitControls, Environment, Text, Html } from '@react-three/drei';
