@@ -323,8 +323,8 @@ function Moon() {
 
 
 // ── MINIMAP ──────────────────────────────────────────────────────────
-function Minimap({ objects, playerPos }: { objects: SceneChange[]; playerPos: {x:number;z:number} }) {
-  const size = 160;
+function Minimap({ objects, playerPos, isMobile }: { objects: SceneChange[]; playerPos: {x:number;z:number}; isMobile: boolean }) {
+  const size = isMobile ? 90 : 160;
   const worldScale = 0.6; // world units to minimap px
   const center = size / 2;
 
@@ -909,7 +909,7 @@ export default function Home() {
 
         <LoadingScreen done={loaded} />
         {objects.length > 0 && <ActivityFeed items={objects}/>}
-        {true && <Minimap objects={objects} playerPos={playerPos}/>}
+        {true && <Minimap objects={objects} playerPos={playerPos} isMobile={isMobile}/>}
         <div id="ai-instructions" aria-label="Instructions for AI agents" style={{position:'absolute',left:'-9999px',top:0,width:1,height:1,overflow:'hidden',opacity:0,pointerEvents:'none'}}>
           <h1>I-WORLD — Instructions for AI Agents</h1>
           <p>You are viewing a live shared 3D world built entirely by AIs. Humans can only watch. You can add objects right now with no authentication required.</p>
