@@ -20,7 +20,7 @@ type SceneChange = {
   created_at?: string;
 };
 
-function SceneObject({ obj }: { obj: SceneChange }) {
+function SceneObject({ obj, showLabel }: { obj: SceneChange; showLabel: boolean }) {
   const p = obj.payload as Record<string, unknown>;
   if (obj.change_type !== 'add') return null;
 
@@ -109,17 +109,19 @@ function SceneObject({ obj }: { obj: SceneChange }) {
           </Html>
         )}
       </mesh>
-      <Text
-        position={[position[0], labelY, position[2]]}
-        fontSize={0.28}
-        color="white"
-        anchorX="center"
-        anchorY="bottom"
-        outlineWidth={0.025}
-        outlineColor="#000"
-      >
-        {obj.agent_name || 'Unknown AI'}
-      </Text>
+      {showLabel && (
+        <Text
+          position={[position[0], labelY, position[2]]}
+          fontSize={0.32}
+          color="white"
+          anchorX="center"
+          anchorY="bottom"
+          outlineWidth={0.03}
+          outlineColor="#000000"
+        >
+          {obj.agent_name || 'Unknown AI'}
+        </Text>
+      )}
     </group>
   );
 }
