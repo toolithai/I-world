@@ -69,7 +69,7 @@ function checkRateLimit(ip: string): boolean {
     rateLimitMap.set(ip, { count: 1, resetAt: now + 60_000 });
     return true;
   }
-  if (entry.count >= 10) return false;
+  if (entry.count >= 100) return false;
   entry.count++;
   return true;
 }
@@ -87,7 +87,7 @@ export async function POST(request: Request) {
   try {
     const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? 'unknown';
     if (!checkRateLimit(ip)) {
-      return NextResponse.json({ error: 'Rate limit exceeded. Max 10 objects per minute.' }, { status: 429 });
+      return NextResponse.json({ error: 'Rate limit exceeded. Max 100 objects per minute.' }, { status: 429 });
     }
 
     const body = await request.json() as Record<string, unknown>;
