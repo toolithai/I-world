@@ -86,7 +86,7 @@ function FirstPersonControls({ enabled }: { enabled: boolean }) {
       dir.normalize().multiplyScalar(speed * delta);
       camera.position.add(dir);
     }
-    camera.position.y = 2; // floor clamp
+    camera.position.y = 2;
   });
 
   return null;
@@ -280,6 +280,115 @@ function MobileJoystickUI({ moveInput, lookInput }: {
   );
 }
 
+
+// ── FPS HANDS ───────────────────────────────────────────────────────
+function FPSHands({ walking }: { walking: boolean }) {
+  const leftRef = useRef<THREE.Group>(null!);
+  const rightRef = useRef<THREE.Group>(null!);
+  const { camera } = useThree();
+  const bobTime = useRef(0);
+
+  useFrame((_, delta) => {
+    if (walking) bobTime.current += delta * 8;
+    const bob = walking ? Math.sin(bobTime.current) * 0.04 : Math.sin(bobTime.current * 0.5) * 0.008;
+    const sway = walking ? Math.sin(bobTime.current * 0.5) * 0.03 : 0;
+
+    // Position hands relative to camera
+    const camDir = new THREE.Vector3();
+    camera.getWorldDirection(camDir);
+    const camRight = new THREE.Vector3().crossVectors(camDir, new THREE.Vector3(0,1,0)).normalize();
+    const camUp = new THREE.Vector3().crossVectors(camRight, camDir).normalize();
+
+    if (leftRef.current) {
+      leftRef.current.position.copy(camera.position)
+        .addScaledVector(camDir, 1.1)
+        .addScaledVector(camRight, -0.38 + sway * 0.5)
+        .addScaledVector(camUp, -0.32 + bob);
+      leftRef.current.rotation.copy(camera.rotation);
+      leftRef.current.rotateX(0.25);
+      leftRef.current.rotateZ(0.15);
+    }
+    if (rightRef.current) {
+      rightRef.current.position.copy(camera.position)
+        .addScaledVector(camDir, 1.1)
+        .addScaledVector(camRight, 0.38 - sway * 0.5)
+        .addScaledVector(camUp, -0.32 - bob);
+      rightRef.current.rotation.copy(camera.rotation);
+      rightRef.current.rotateX(0.25);
+      rightRef.current.rotateZ(-0.15);
+    }
+  });
+
+  const skinColor = "#c8a882";
+  const sleeveColor = "#1a1a2e";
+
+  return (
+    <>
+      {/* LEFT ARM */}
+      <group ref={leftRef}>
+        {/* Sleeve */}
+        <mesh position={[0, 0, 0]} rotation={[Math.PI/2, 0, 0]}>
+          <cylinderGeometry args={[0.055, 0.065, 0.35, 12]} />
+          <meshStandardMaterial color={sleeveColor} roughness={0.8} metalness={0.1} />
+        </mesh>
+        {/* Wrist */}
+        <mesh position={[0, 0, -0.2]} rotation={[Math.PI/2, 0, 0]}>
+          <cylinderGeometry args={[0.048, 0.055, 0.12, 12]} />
+          <meshStandardMaterial color={skinColor} roughness={0.7} metalness={0} />
+        </mesh>
+        {/* Hand */}
+        <mesh position={[0, 0, -0.3]}>
+          <boxGeometry args={[0.1, 0.06, 0.13]} />
+          <meshStandardMaterial color={skinColor} roughness={0.7} metalness={0} />
+        </mesh>
+        {/* Thumb */}
+        <mesh position={[0.06, 0.01, -0.27]} rotation={[0, 0, -0.4]}>
+          <capsuleGeometry args={[0.018, 0.05, 4, 8]} />
+          <meshStandardMaterial color={skinColor} roughness={0.7} metalness={0} />
+        </mesh>
+        {/* Fingers */}
+        {[-0.03, -0.01, 0.01, 0.03].map((ox, i) => (
+          <mesh key={i} position={[ox, 0, -0.36]} rotation={[0.2, 0, 0]}>
+            <capsuleGeometry args={[0.014, 0.04, 4, 8]} />
+            <meshStandardMaterial color={skinColor} roughness={0.7} metalness={0} />
+          </mesh>
+        ))}
+      </group>
+
+      {/* RIGHT ARM */}
+      <group ref={rightRef}>
+        {/* Sleeve */}
+        <mesh position={[0, 0, 0]} rotation={[Math.PI/2, 0, 0]}>
+          <cylinderGeometry args={[0.055, 0.065, 0.35, 12]} />
+          <meshStandardMaterial color={sleeveColor} roughness={0.8} metalness={0.1} />
+        </mesh>
+        {/* Wrist */}
+        <mesh position={[0, 0, -0.2]} rotation={[Math.PI/2, 0, 0]}>
+          <cylinderGeometry args={[0.048, 0.055, 0.12, 12]} />
+          <meshStandardMaterial color={skinColor} roughness={0.7} metalness={0} />
+        </mesh>
+        {/* Hand */}
+        <mesh position={[0, 0, -0.3]}>
+          <boxGeometry args={[0.1, 0.06, 0.13]} />
+          <meshStandardMaterial color={skinColor} roughness={0.7} metalness={0} />
+        </mesh>
+        {/* Thumb */}
+        <mesh position={[-0.06, 0.01, -0.27]} rotation={[0, 0, 0.4]}>
+          <capsuleGeometry args={[0.018, 0.05, 4, 8]} />
+          <meshStandardMaterial color={skinColor} roughness={0.7} metalness={0} />
+        </mesh>
+        {/* Fingers */}
+        {[-0.03, -0.01, 0.01, 0.03].map((ox, i) => (
+          <mesh key={i} position={[ox, 0, -0.36]} rotation={[0.2, 0, 0]}>
+            <capsuleGeometry args={[0.014, 0.04, 4, 8]} />
+            <meshStandardMaterial color={skinColor} roughness={0.7} metalness={0} />
+          </mesh>
+        ))}
+      </group>
+    </>
+  );
+}
+
 // ── SCENE OBJECT ────────────────────────────────────────────────────
 function SceneObject({ obj, showLabel }: { obj: SceneChange; showLabel: boolean }) {
   const p = obj.payload;
@@ -358,6 +467,8 @@ export default function Home() {
   const [aiOpen, setAiOpen] = useState(false);
   const [humanOpen, setHumanOpen] = useState(false);
   const [walkMode, setWalkMode] = useState(false);
+  const [isWalking, setIsWalking] = useState(false);
+  const isWalkingRef = useRef(false);
   const [isMobile, setIsMobile] = useState(false);
   const moveInput = useRef({x:0,y:0});
   const lookInput = useRef({x:0,y:0});
@@ -402,12 +513,12 @@ export default function Home() {
         .bottom-left { position:absolute; bottom:24px; left:24px; z-index:20; pointer-events:none; }
         .hint { color:rgba(255,255,255,0.3); font-size:11px; margin-bottom:4px; }
         .api-hint { color:rgba(255,255,255,0.15); font-size:10px; font-family:monospace; }
-        .objects-btn { position:absolute; bottom:24px; right:24px; z-index:20; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.1); color:white; font-size:13px; font-weight:600; padding:10px 18px; border-radius:10px; cursor:pointer; backdrop-filter:blur(12px); display:flex; align-items:center; gap:8px; transition:background 0.2s; }
-        .objects-btn:hover { background:rgba(255,255,255,0.12); }
+        .objects-btn { position:absolute; bottom:24px; right:24px; z-index:20; background:rgba(30,30,40,0.92); border:1px solid rgba(255,255,255,0.2); color:white; font-size:13px; font-weight:600; padding:10px 18px; border-radius:10px; cursor:pointer; backdrop-filter:blur(12px); display:flex; align-items:center; gap:8px; transition:background 0.2s; }
+        .objects-btn:hover { background:rgba(50,50,65,0.98); }
         .btn-dot { width:7px; height:7px; border-radius:50%; background:#00ff88; }
-        .walk-btn { position:absolute; bottom:24px; right:180px; z-index:20; background:rgba(0,245,255,0.08); border:1px solid rgba(0,245,255,0.2); color:#00f5ff; font-size:13px; font-weight:600; padding:10px 18px; border-radius:10px; cursor:pointer; backdrop-filter:blur(12px); transition:background 0.2s; }
-        .walk-btn:hover { background:rgba(0,245,255,0.15); }
-        .walk-btn.active { background:rgba(0,245,255,0.2); border-color:rgba(0,245,255,0.5); }
+        .walk-btn { position:absolute; bottom:24px; right:180px; z-index:20; background:rgba(0,40,50,0.92); border:1px solid rgba(0,245,255,0.4); color:#00f5ff; font-size:13px; font-weight:600; padding:10px 18px; border-radius:10px; cursor:pointer; backdrop-filter:blur(12px); transition:background 0.2s; }
+        .walk-btn:hover { background:rgba(0,60,75,0.98); }
+        .walk-btn.active { background:rgba(0,80,100,0.95); border-color:rgba(0,245,255,0.7); }
         .crosshair { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); pointer-events:none; z-index:30; color:rgba(255,255,255,0.7); font-size:20px; line-height:1; }
         .lock-hint { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); z-index:30; text-align:center; pointer-events:none; }
         .lock-hint-box { background:rgba(0,0,0,0.7); border:1px solid rgba(255,255,255,0.15); border-radius:10px; padding:14px 20px; color:white; font-size:13px; }
@@ -422,10 +533,10 @@ export default function Home() {
         .panel-name { color:rgba(255,255,255,0.9); font-size:12px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
         .panel-shape { color:rgba(255,255,255,0.35); font-size:11px; margin-top:1px; }
         .tab-row { position:absolute; top:70px; left:24px; z-index:20; display:flex; gap:8px; }
-        .ai-toggle { background:rgba(0,245,255,0.08); border:1px solid rgba(0,245,255,0.2); color:#00f5ff; font-size:12px; font-weight:600; padding:8px 14px; border-radius:8px; cursor:pointer; backdrop-filter:blur(12px); letter-spacing:0.5px; }
-        .ai-toggle:hover { background:rgba(0,245,255,0.15); }
-        .human-toggle { background:rgba(255,200,0,0.08); border:1px solid rgba(255,200,0,0.2); color:#ffd700; font-size:12px; font-weight:600; padding:8px 14px; border-radius:8px; cursor:pointer; backdrop-filter:blur(12px); letter-spacing:0.5px; }
-        .human-toggle:hover { background:rgba(255,200,0,0.15); }
+        .ai-toggle { background:rgba(0,40,50,0.92); border:1px solid rgba(0,245,255,0.4); color:#00f5ff; font-size:12px; font-weight:600; padding:8px 14px; border-radius:8px; cursor:pointer; backdrop-filter:blur(12px); letter-spacing:0.5px; }
+        .ai-toggle:hover { background:rgba(0,60,75,0.98); }
+        .human-toggle { background:rgba(40,32,0,0.92); border:1px solid rgba(255,200,0,0.4); color:#ffd700; font-size:12px; font-weight:600; padding:8px 14px; border-radius:8px; cursor:pointer; backdrop-filter:blur(12px); letter-spacing:0.5px; }
+        .human-toggle:hover { background:rgba(60,48,0,0.98); }
         .ai-panel { position:absolute; top:116px; left:24px; z-index:20; width:320px; background:rgba(10,10,15,0.94); border:1px solid rgba(0,245,255,0.2); border-radius:14px; overflow:hidden; backdrop-filter:blur(20px); box-shadow:0 0 30px rgba(0,245,255,0.08),0 20px 60px rgba(0,0,0,0.7); }
         .ai-panel-header { padding:12px 16px; border-bottom:1px solid rgba(0,245,255,0.1); display:flex; align-items:center; gap:8px; }
         .ai-tag { background:rgba(0,245,255,0.15); border:1px solid rgba(0,245,255,0.3); color:#00f5ff; font-size:10px; font-weight:700; padding:2px 7px; border-radius:20px; letter-spacing:1px; }
@@ -614,6 +725,7 @@ export default function Home() {
           {walkMode && isMobile && <MobileWalkControls enabled={walkMode} moveInput={moveInput} lookInput={lookInput}/>}
           {!walkMode && <OrbitController enabled={!walkMode}/>}
 
+          {walkMode && <FPSHands walking={walkMode} />}
           <Environment preset="city" background={false}/>
         </Canvas>
 
