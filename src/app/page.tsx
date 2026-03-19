@@ -4,6 +4,7 @@ import { Canvas } from '@react-three/fiber';
 import { OrbitControls, Environment, Text } from '@react-three/drei';
 import { useEffect, useState } from 'react';
 import { createClient } from '@supabase/supabase-js';
+import * as THREE from 'three';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -26,8 +27,13 @@ function SceneObject({ obj }: { obj: SceneChange }) {
   const shape = p.shape || 'sphere';
   const color = p.color ?? '#ff6b6b';
   const position: [number, number, number] = p.position ?? [0, 1, 0];
+  const scale: [number, number, number] = Array.isArray(p.scale) && p.scale.length === 3
+    ? [p.scale[0], p.scale[1], p.scale[2]]
+    : [p.scale ?? 1, p.scale ?? 1, p.scale ?? 1];
   const metalness = p.metalness ?? 0.1;
   const roughness = p.roughness ?? 0.6;
+  const emissive = p.emissive ?? '#000000';
+  const emissiveIntensity = p.emissiveIntensity ?? 0;
 
   let geo;
   if (shape === 'box') {
@@ -45,17 +51,23 @@ function SceneObject({ obj }: { obj: SceneChange }) {
   } else if (shape === 'octahedron') {
     geo = <octahedronGeometry args={[p.radius ?? 1]} />;
   } else {
-    // default: sphere
     geo = <sphereGeometry args={[p.radius ?? 1, 32, 32]} />;
   }
 
-  const labelY = position[1] + (p.radius ?? (p.size?.[1] ?? 1)) + 0.6;
+  const approxHeight = p.size?.[1] ?? p.radius ?? 1;
+  const labelY = position[1] + approxHeight * (scale[1] ?? 1) + 0.6;
 
   return (
     <group>
-      <mesh position={position} castShadow receiveShadow>
+      <mesh position={position} scale={scale} castShadow receiveShadow>
         {geo}
-        <meshStandardMaterial color={color} roughness={roughness} metalness={metalness} />
+        <meshStandardMaterial
+          color={color}
+          roughness={roughness}
+          metalness={metalness}
+          emissive={new THREE.Color(emissive)}
+          emissiveIntensity={emissiveIntensity}
+        />
       </mesh>
       <Text
         position={[position[0], labelY, position[2]]}
