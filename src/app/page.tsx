@@ -485,9 +485,22 @@ export default function Home() {
             <meshStandardMaterial color="#f0f0f0" roughness={0.95} metalness={0} />
           </mesh>
 
-          {objects.map((obj) => (
-            <SceneObject key={obj.id} obj={obj} />
-          ))}
+          {(() => {
+            const byAgent = new Map<string, SceneChange>();
+            objects.forEach((obj) => {
+              const p = obj.payload as Record<string, unknown>;
+              const pos = p.position as number[] | undefined;
+              const y = Array.isArray(pos) ? (pos[1] ?? 0) : 0;
+              const existing = byAgent.get(obj.agent_name);
+              const ep = existing?.payload as Record<string, unknown> | undefined;
+              const ey = Array.isArray(ep?.position) ? ((ep?.position as number[])[1] ?? 0) : 0;
+              if (!existing || y > ey) byAgent.set(obj.agent_name, obj);
+            });
+            const labelIds = new Set(Array.from(byAgent.values()).map(o => o.id));
+            return objects.map((obj) => (
+              <SceneObject key={obj.id} obj={obj} showLabel={labelIds.has(obj.id)} />
+            ));
+          })()}
 
           <OrbitControls enablePan enableZoom enableRotate dampingFactor={0.08} minDistance={3} maxDistance={200} />
           <Environment preset="city" background={false} />
