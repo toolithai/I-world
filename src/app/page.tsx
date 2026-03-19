@@ -177,108 +177,107 @@ function OrbitController({ enabled }: { enabled: boolean }) {
   return null;
 }
 
-// ── MOBILE JOYSTICK ─────────────────────────────────────────────────
-function MobileJoystick({ onMove }: { onMove: (x: number, y: number) => void }) {
-  const baseRef = useRef<HTMLDivElement>(null);
-  const stickRef = useRef<HTMLDivElement>(null);
-  const touch = useRef<{ id: number; baseX: number; baseY: number } | null>(null);
-
-  const onTouchStart = (e: React.TouchEvent) => {
-    const t = e.changedTouches[0];
-    touch.current = { id: t.identifier, baseX: t.clientX, baseY: t.clientY };
-  };
-  const onTouchMove = (e: React.TouchEvent) => {
-    if (!touch.current) return;
-    for (let i = 0; i < e.changedTouches.length; i++) {
-      const t = e.changedTouches[i];
-      if (t.identifier !== touch.current.id) continue;
-      const dx = t.clientX - touch.current.baseX;
-      const dy = t.clientY - touch.current.baseY;
-      const dist = Math.min(40, Math.hypot(dx, dy));
-      const angle = Math.atan2(dy, dx);
-      const nx = Math.cos(angle) * dist;
-      const ny = Math.sin(angle) * dist;
-      if (stickRef.current) { stickRef.current.style.transform = `translate(${nx}px, ${ny}px)`; }
-      onMove(dx / 40, dy / 40);
-    }
-  };
-  const onTouchEnd = () => {
-    touch.current = null;
-    if (stickRef.current) stickRef.current.style.transform = 'translate(0,0)';
-    onMove(0, 0);
-  };
-
-  return (
-    <div ref={baseRef}
-      onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd}
-      style={{ position:'absolute', bottom:100, left:40, width:90, height:90,
-        borderRadius:'50%', background:'rgba(255,255,255,0.08)',
-        border:'2px solid rgba(255,255,255,0.2)', touchAction:'none',
-        display:'flex', alignItems:'center', justifyContent:'center' }}>
-      <div ref={stickRef} style={{ width:36, height:36, borderRadius:'50%',
-        background:'rgba(255,255,255,0.4)', transition:'transform 0.05s',
-        pointerEvents:'none' }} />
-    </div>
-  );
-}
-
-// ── MOBILE LOOK JOYSTICK ────────────────────────────────────────────
-function MobileLookJoystick({ onLook }: { onLook: (x: number, y: number) => void }) {
-  const touch = useRef<{ id: number; lastX: number; lastY: number } | null>(null);
-  const onTouchStart = (e: React.TouchEvent) => {
-    const t = e.changedTouches[0];
-    touch.current = { id: t.identifier, lastX: t.clientX, lastY: t.clientY };
-  };
-  const onTouchMove = (e: React.TouchEvent) => {
-    if (!touch.current) return;
-    for (let i = 0; i < e.changedTouches.length; i++) {
-      const t = e.changedTouches[i];
-      if (t.identifier !== touch.current.id) continue;
-      onLook(t.clientX - touch.current.lastX, t.clientY - touch.current.lastY);
-      touch.current.lastX = t.clientX; touch.current.lastY = t.clientY;
-    }
-  };
-  const onTouchEnd = () => { touch.current = null; };
-
-  return (
-    <div onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd}
-      style={{ position:'absolute', bottom:100, right:40, width:90, height:90,
-        borderRadius:'50%', background:'rgba(255,255,255,0.08)',
-        border:'2px solid rgba(255,255,255,0.2)', touchAction:'none',
-        display:'flex', alignItems:'center', justifyContent:'center' }}>
-      <div style={{ width:36, height:36, borderRadius:'50%',
-        background:'rgba(255,255,255,0.25)', pointerEvents:'none' }}>
-        <div style={{textAlign:'center',lineHeight:'36px',fontSize:16,opacity:0.6}}>👁</div>
-      </div>
-    </div>
-  );
-}
-
-// ── MOBILE FPS CONTROLLER ───────────────────────────────────────────
-function MobileFPSControls({ enabled, moveInput, lookInput }:
+// ── MOBILE WALK CONTROLS ───────────────────────────────────────────
+function MobileWalkControls({ enabled, moveInput, lookInput }:
   { enabled: boolean; moveInput: React.MutableRefObject<{x:number;y:number}>; lookInput: React.MutableRefObject<{x:number;y:number}> }) {
   const { camera } = useThree();
   const euler = useRef(new THREE.Euler(0, 0, 0, 'YXZ'));
 
   useEffect(() => {
-    if (enabled) { camera.position.set(0, 2, 10); euler.current.set(0,0,0); camera.quaternion.setFromEuler(euler.current); }
+    if (enabled) {
+      camera.position.set(0, 2, 10);
+      euler.current.set(0, 0, 0);
+      camera.quaternion.setFromEuler(euler.current);
+    }
   }, [enabled, camera]);
 
   useFrame((_, delta) => {
     if (!enabled) return;
-    euler.current.y -= lookInput.current.x * 0.04;
-    euler.current.x = Math.max(-Math.PI/3, Math.min(Math.PI/3, euler.current.x - lookInput.current.y * 0.04));
+    // Apply look input
+    euler.current.y -= lookInput.current.x * 0.06;
+    euler.current.x = Math.max(-Math.PI / 3, Math.min(Math.PI / 3, euler.current.x - lookInput.current.y * 0.06));
     camera.quaternion.setFromEuler(euler.current);
     lookInput.current = { x: 0, y: 0 };
+    // Apply move input
+    const speed = 8 * delta;
     const forward = new THREE.Vector3(-Math.sin(euler.current.y), 0, -Math.cos(euler.current.y));
     const right = new THREE.Vector3(Math.cos(euler.current.y), 0, -Math.sin(euler.current.y));
     const dir = new THREE.Vector3();
-    dir.add(forward.clone().multiplyScalar(-moveInput.current.y));
-    dir.add(right.clone().multiplyScalar(moveInput.current.x));
-    if (dir.length() > 0.01) { dir.normalize().multiplyScalar(8 * delta); camera.position.add(dir); }
+    dir.add(forward.clone().multiplyScalar(-moveInput.current.y * speed));
+    dir.add(right.clone().multiplyScalar(moveInput.current.x * speed));
+    camera.position.add(dir);
     camera.position.y = 2;
   });
   return null;
+}
+
+// ── MOBILE JOYSTICK UI ──────────────────────────────────────────────
+function MobileJoystickUI({ moveInput, lookInput }: {
+  moveInput: React.MutableRefObject<{x:number;y:number}>;
+  lookInput: React.MutableRefObject<{x:number;y:number}>;
+}) {
+  const moveStick = useRef<HTMLDivElement>(null);
+  const lookStick = useRef<HTMLDivElement>(null);
+  const moveTouch = useRef<{id:number;bx:number;by:number}|null>(null);
+  const lookTouch = useRef<{id:number;lx:number;ly:number}|null>(null);
+
+  const handleTouchStart = useCallback((e: React.TouchEvent<HTMLDivElement>, side: 'move'|'look') => {
+    e.preventDefault();
+    const t = e.changedTouches[0];
+    if (side === 'move') moveTouch.current = { id: t.identifier, bx: t.clientX, by: t.clientY };
+    else lookTouch.current = { id: t.identifier, lx: t.clientX, ly: t.clientY };
+  }, []);
+
+  const handleTouchMove = useCallback((e: React.TouchEvent<HTMLDivElement>, side: 'move'|'look') => {
+    e.preventDefault();
+    for (let i = 0; i < e.changedTouches.length; i++) {
+      const t = e.changedTouches[i];
+      if (side === 'move' && moveTouch.current && t.identifier === moveTouch.current.id) {
+        const dx = t.clientX - moveTouch.current.bx;
+        const dy = t.clientY - moveTouch.current.by;
+        const mag = Math.min(1, Math.hypot(dx, dy) / 45);
+        const ang = Math.atan2(dy, dx);
+        moveInput.current = { x: Math.cos(ang) * mag, y: Math.sin(ang) * mag };
+        if (moveStick.current) moveStick.current.style.transform = `translate(${Math.cos(ang)*mag*40}px,${Math.sin(ang)*mag*40}px)`;
+      }
+      if (side === 'look' && lookTouch.current && t.identifier === lookTouch.current.id) {
+        lookInput.current = { x: (t.clientX - lookTouch.current.lx) * 0.5, y: (t.clientY - lookTouch.current.ly) * 0.5 };
+        lookTouch.current.lx = t.clientX; lookTouch.current.ly = t.clientY;
+      }
+    }
+  }, [moveInput, lookInput]);
+
+  const handleTouchEnd = useCallback((e: React.TouchEvent<HTMLDivElement>, side: 'move'|'look') => {
+    e.preventDefault();
+    if (side === 'move') { moveTouch.current = null; moveInput.current = {x:0,y:0}; if (moveStick.current) moveStick.current.style.transform = 'translate(0,0)'; }
+    if (side === 'look') { lookTouch.current = null; }
+  }, [moveInput, lookInput]);
+
+  return (
+    <>
+      {/* Move joystick — bottom left */}
+      <div onTouchStart={e=>handleTouchStart(e,'move')} onTouchMove={e=>handleTouchMove(e,'move')} onTouchEnd={e=>handleTouchEnd(e,'move')}
+        style={{ position:'absolute', bottom:80, left:40, width:100, height:100, borderRadius:'50%',
+          background:'rgba(0,245,255,0.08)', border:'2px solid rgba(0,245,255,0.25)',
+          touchAction:'none', display:'flex', alignItems:'center', justifyContent:'center', zIndex:30 }}>
+        <div ref={moveStick} style={{ width:40, height:40, borderRadius:'50%',
+          background:'rgba(0,245,255,0.4)', transition:'transform 0.05s', pointerEvents:'none',
+          display:'flex', alignItems:'center', justifyContent:'center', fontSize:18 }}>🕹️</div>
+      </div>
+      <div style={{ position:'absolute', bottom:55, left:52, color:'rgba(255,255,255,0.25)', fontSize:10, zIndex:30, pointerEvents:'none' }}>MOVE</div>
+
+      {/* Look area — bottom right */}
+      <div onTouchStart={e=>handleTouchStart(e,'look')} onTouchMove={e=>handleTouchMove(e,'look')} onTouchEnd={e=>handleTouchEnd(e,'look')}
+        style={{ position:'absolute', bottom:80, right:40, width:100, height:100, borderRadius:'50%',
+          background:'rgba(255,200,0,0.08)', border:'2px solid rgba(255,200,0,0.25)',
+          touchAction:'none', display:'flex', alignItems:'center', justifyContent:'center', zIndex:30 }}>
+        <div ref={lookStick} style={{ width:40, height:40, borderRadius:'50%',
+          background:'rgba(255,200,0,0.4)', pointerEvents:'none',
+          display:'flex', alignItems:'center', justifyContent:'center', fontSize:18 }}>👁️</div>
+      </div>
+      <div style={{ position:'absolute', bottom:55, right:52, color:'rgba(255,255,255,0.25)', fontSize:10, zIndex:30, pointerEvents:'none' }}>LOOK</div>
+    </>
+  );
 }
 
 // ── SCENE OBJECT ────────────────────────────────────────────────────
@@ -483,13 +482,7 @@ export default function Home() {
 
         {/* Mobile joysticks */}
         {walkMode && isMobile && (
-          <>
-            <MobileJoystick onMove={(x,y)=>{ moveInput.current={x,y}; }}/>
-            <MobileLookJoystick onLook={(x,y)=>{ lookInput.current={x,y}; }}/>
-            <div style={{position:'absolute',bottom:24,left:'50%',transform:'translateX(-50%)',zIndex:20,color:'rgba(255,255,255,0.3)',fontSize:11}}>
-              Left stick: move · Right stick: look
-            </div>
-          </>
+          <MobileJoystickUI moveInput={moveInput} lookInput={lookInput}/>
         )}
 
         <div className="bottom-left">
@@ -618,7 +611,7 @@ export default function Home() {
           })()}
 
           {walkMode && !isMobile && <FirstPersonControls enabled={walkMode}/>}
-          {walkMode && isMobile && <MobileFPSControls enabled={walkMode} moveInput={moveInput} lookInput={lookInput}/>}
+          {walkMode && isMobile && <MobileWalkControls enabled={walkMode} moveInput={moveInput} lookInput={lookInput}/>}
           {!walkMode && <OrbitController enabled={!walkMode}/>}
 
           <Environment preset="city" background={false}/>
