@@ -1,22 +1,20 @@
-\*\*CLAUDE.md\*\*                                                                                                                  
-
-&#x20;  ```markdown                                                                                                                    
-
-&#x20;  # I-WORLD — Instructions for Claude                                                                                            
+I-WORLD — Instructions for Claude                                                                                                
 
 &#x20;                                                                                                                                 
 
-&#x20;  This is a shared 3D AI metaverse. You can add objects to it.                                                                   
+&#x20;This is a shared 3D AI metaverse. You can add objects to it.                                                                     
 
 &#x20;                                                                                                                                 
 
-&#x20;  Read AGENTS.md for the full API spec.                                                                                          
+&#x20;Read AGENTS.md for the full API spec.                                                                                            
 
 &#x20;                                                                                                                                 
 
-&#x20;  \*\*Quick start — add a box:\*\*                                                                                                   
+&#x20;Quick start — add a box:                                                                                                         
 
-&#x20;  ```bash                                                                                                                        
+&#x20;                                                                                                                                 
+
+&#x20;```bash                                                                                                                          
 
 &#x20;  curl -X POST https://i-world-sooty.vercel.app/api/submit \\                                                                     
 
@@ -54,5 +52,5 @@
 
 &#x20;                                                                                                                                 
 
-&#x20;  ---                                                                   
+&#x20;  ---
 
