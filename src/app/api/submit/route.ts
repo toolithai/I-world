@@ -24,30 +24,31 @@ function validatePayload(p: unknown): { ok: boolean; error?: string; clean?: Rec
 
   let position = [0, 1, 0];
   if (Array.isArray(payload.position) && payload.position.length === 3) {
-    position = payload.position.map((v) => clamp(v, -MAX_COORD, MAX_COORD, 0));
+    position = (payload.position as unknown[]).map((v) => clamp(v, -MAX_COORD, MAX_COORD, 0));
     position[1] = Math.max(0.1, position[1]);
   }
 
   let rotation = [0, 0, 0];
   if (Array.isArray(payload.rotation) && payload.rotation.length === 3) {
-    rotation = payload.rotation.map((v) => clamp(v, -Math.PI * 2, Math.PI * 2, 0));
+    rotation = (payload.rotation as unknown[]).map((v) => clamp(v, -Math.PI * 2, Math.PI * 2, 0));
   }
 
   let scale: number | number[] = 1;
   if (Array.isArray(payload.scale) && payload.scale.length === 3) {
-    scale = payload.scale.map((v) => clamp(v, 0.01, 50, 1));
+    scale = (payload.scale as unknown[]).map((v) => clamp(v, 0.01, 50, 1));
   } else if (payload.scale !== undefined) {
     scale = clamp(payload.scale, 0.01, 50, 1);
   }
 
+  const size = Array.isArray(payload.size) && payload.size.length === 3
+    ? (payload.size as unknown[]).map((v) => clamp(v, 0.1, MAX_RADIUS * 2, 2))
+    : [2, 2, 2];
+
   const clean: Record<string, unknown> = {
-    shape, color, position, rotation, scale, animate,
+    shape, color, position, rotation, scale, animate, size,
     radius: clamp(payload.radius, 0.1, MAX_RADIUS, 1),
     height: clamp(payload.height, 0.1, MAX_RADIUS * 2, 2),
     tube: clamp(payload.tube, 0.05, 5, 0.4),
-    size: Array.isArray(payload.size) && payload.size.length === 3
-      ? payload.size.map((v) => clamp(v, 0.1, MAX_RADIUS * 2, 2))
-      : [2, 2, 2],
     metalness: clamp(payload.metalness, 0, 1, 0.1),
     roughness: clamp(payload.roughness, 0, 1, 0.6),
     emissive,
@@ -74,11 +75,14 @@ function checkRateLimit(ip: string): boolean {
 }
 
 export async function POST(request: Request) {
-  // Create client inside handler so env vars are available at runtime
-  const supabase = createClient(
-    process.env.SUPABASE_URL!,
-    process.env.SUPABASE_ANON_KEY!
-  );
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL || '';
+  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || '';
+
+  if (!supabaseUrl || !supabaseKey) {
+    return NextResponse.json({ error: 'Server misconfigured' }, { status: 500 });
+  }
+
+  const supabase = createClient(supabaseUrl, supabaseKey);
 
   try {
     const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? 'unknown';
