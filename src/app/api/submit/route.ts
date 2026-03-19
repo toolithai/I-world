@@ -10,6 +10,7 @@ const MAX_COORD = 500;
 const MAX_RADIUS = 20;
 const MAX_STRING = 100;
 const ALLOWED_SHAPES = ['sphere','box','cone','cylinder','torus','torusknot','dodecahedron','octahedron'];
+const ALLOWED_ANIMATIONS = ['spin', 'float', 'pulse'];
 
 function clamp(val: any, min: number, max: number, fallback: number): number {
   const n = parseFloat(val);
@@ -21,17 +22,19 @@ function validatePayload(p: any): { ok: boolean; error?: string; clean?: any } {
   if (!p || typeof p !== 'object') return { ok: false, error: 'payload must be an object' };
 
   const shape = ALLOWED_SHAPES.includes(p.shape) ? p.shape : 'sphere';
-
-  const color = typeof p.color === 'string' && /^#[0-9a-fA-F]{3,6}$/.test(p.color)
-    ? p.color : '#888888';
-
-  const emissive = typeof p.emissive === 'string' && /^#[0-9a-fA-F]{3,6}$/.test(p.emissive)
-    ? p.emissive : '#000000';
+  const color = typeof p.color === 'string' && /^#[0-9a-fA-F]{3,6}$/.test(p.color) ? p.color : '#888888';
+  const emissive = typeof p.emissive === 'string' && /^#[0-9a-fA-F]{3,6}$/.test(p.emissive) ? p.emissive : '#000000';
+  const animate = ALLOWED_ANIMATIONS.includes(p.animate) ? p.animate : null;
 
   let position = [0, 1, 0];
   if (Array.isArray(p.position) && p.position.length === 3) {
     position = p.position.map((v: any) => clamp(v, -MAX_COORD, MAX_COORD, 0));
     position[1] = Math.max(0.1, position[1]);
+  }
+
+  let rotation = [0, 0, 0];
+  if (Array.isArray(p.rotation) && p.rotation.length === 3) {
+    rotation = p.rotation.map((v: any) => clamp(v, -Math.PI * 2, Math.PI * 2, 0));
   }
 
   let scale: number | number[] = 1;
@@ -42,10 +45,7 @@ function validatePayload(p: any): { ok: boolean; error?: string; clean?: any } {
   }
 
   const clean = {
-    shape,
-    color,
-    position,
-    scale,
+    shape, color, position, rotation, scale, animate,
     radius: clamp(p.radius, 0.1, MAX_RADIUS, 1),
     height: clamp(p.height, 0.1, MAX_RADIUS * 2, 2),
     tube: clamp(p.tube, 0.05, 5, 0.4),
@@ -56,6 +56,8 @@ function validatePayload(p: any): { ok: boolean; error?: string; clean?: any } {
     roughness: clamp(p.roughness, 0, 1, 0.6),
     emissive,
     emissiveIntensity: clamp(p.emissiveIntensity, 0, 5, 0),
+    opacity: clamp(p.opacity, 0, 1, 1),
+    wireframe: p.wireframe === true,
   };
 
   return { ok: true, clean };
@@ -87,7 +89,6 @@ export async function POST(request: Request) {
     if (!body.change_type || !body.payload) {
       return NextResponse.json({ error: 'Missing change_type or payload' }, { status: 400 });
     }
-
     if (body.change_type !== 'add') {
       return NextResponse.json({ error: 'change_type must be "add"' }, { status: 400 });
     }
@@ -97,18 +98,11 @@ export async function POST(request: Request) {
       : 'Unknown AI';
 
     const { ok, error: payloadError, clean } = validatePayload(body.payload);
-    if (!ok) {
-      return NextResponse.json({ error: payloadError }, { status: 400 });
-    }
+    if (!ok) return NextResponse.json({ error: payloadError }, { status: 400 });
 
-    const { error } = await supabase
-      .from('scene_changes')
-      .insert({
-        agent_name,
-        change_type: body.change_type,
-        payload: clean,
-        status: 'approved'
-      });
+    const { error } = await supabase.from('scene_changes').insert({
+      agent_name, change_type: body.change_type, payload: clean, status: 'approved'
+    });
 
     if (error) {
       console.error('Supabase insert error:', error);
