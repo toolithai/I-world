@@ -305,7 +305,7 @@ export default function Home() {
           </div>
         )}
 
-        <Canvas camera={{ position: [0, 6, 18], fov: 50 }} gl={{ antialias: true }}>
+        <Canvas camera={{ position: [0, 35, 55], fov: 60 }} gl={{ antialias: true }}>
           <ambientLight intensity={0.7} />
           <pointLight position={[10, 10, 10]} intensity={1.2} castShadow />
           <pointLight position={[-10, 5, -10]} intensity={0.6} />
