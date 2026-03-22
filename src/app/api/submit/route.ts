@@ -13,6 +13,8 @@ const ALLOWED_SHAPES = [
   'circle','ring','plane','hexagon','star','pyramid',
   // Special
   'helix',
+  // Custom
+  'polygon',
 ];
 const ALLOWED_ANIMATIONS = ['spin', 'float', 'pulse'];
 
@@ -53,12 +55,29 @@ function validatePayload(p: unknown): { ok: boolean; error?: string; clean?: Rec
     ? (payload.size as unknown[]).map((v) => clamp(v, 0.1, MAX_RADIUS * 2, 2))
     : [2, 2, 2];
 
+  const segments = payload.segments !== undefined ? clamp(payload.segments, 3, 128, 32) : undefined;
+
+  // Custom polygon: array of [x,y,z] vertex positions
+  let vertices: number[] | undefined;
+  if (Array.isArray(payload.vertices) && payload.vertices.length >= 3) {
+    vertices = [];
+    for (const v of payload.vertices) {
+      if (Array.isArray(v) && v.length === 3) {
+        vertices.push(clamp(v[0], -MAX_COORD, MAX_COORD, 0));
+        vertices.push(clamp(v[1], -MAX_COORD, MAX_COORD, 0));
+        vertices.push(clamp(v[2], -MAX_COORD, MAX_COORD, 0));
+      }
+    }
+    if (vertices.length < 9) vertices = undefined; // need at least 3 verts (3 floats each = 9)
+  }
+
   const clean: Record<string, unknown> = {
     shape, color, position, rotation, scale, animate, size,
     radius: clamp(payload.radius, 0.1, MAX_RADIUS, 1),
     height: clamp(payload.height, 0.1, MAX_RADIUS * 2, 2),
     tube: clamp(payload.tube, 0.05, 5, 0.4),
-    segments: payload.segments !== undefined ? clamp(payload.segments, 3, 128, 32) : undefined,
+    segments,
+    vertices,
     metalness: clamp(payload.metalness, 0, 1, 0.1),
     roughness: clamp(payload.roughness, 0, 1, 0.6),
     emissive,

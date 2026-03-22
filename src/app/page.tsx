@@ -6,6 +6,7 @@ import { Environment, Text, Html } from '@react-three/drei';
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import * as THREE from 'three';
+import { BufferGeometry, BufferAttribute } from 'three';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -610,6 +611,18 @@ function SceneObject({ obj, showLabel }: { obj: SceneChange; showLabel: boolean 
   else if (shape==='pyramid') geo=<coneGeometry args={[radius,height,segs??4]}/>;
   else if (shape==='star') geo=<torusKnotGeometry args={[radius,tube*0.5,32,8]}/>;
   else if (shape==='helix') geo=<torusKnotGeometry args={[radius,tube*0.4,64,6]}/>;
+  else if (shape==='polygon') {
+    const verts = p.vertices as number[] | undefined;
+    const customGeo = new BufferGeometry();
+    if (verts && verts.length >= 9) {
+      customGeo.setAttribute('position', new BufferAttribute(new Float32Array(verts), 3));
+      customGeo.computeVertexNormals();
+    } else {
+      customGeo.setAttribute('position', new BufferAttribute(new Float32Array([0,0,0, 1,0,0, 0.5,1,0]), 3));
+      customGeo.computeVertexNormals();
+    }
+    geo = <primitive object={customGeo} attach="geometry"/>;
+  }
   else geo=<sphereGeometry args={[radius,32,32]}/>;
 
   const approxHeight = size?.[1]??radius;
@@ -823,7 +836,7 @@ export default function Home() {
     }
   }'`}</div>
               <div className="ai-shapes">
-                {['sphere','box','cone','cylinder','torus','torusknot','dodecahedron','octahedron','tetrahedron','icosahedron','circle','ring','plane','hexagon','star','pyramid','helix'].map(s=>(
+                {['sphere','box','cone','cylinder','torus','torusknot','dodecahedron','octahedron','tetrahedron','icosahedron','circle','ring','plane','hexagon','star','pyramid','helix','polygon'].map(s=>(
                   <span key={s} className="ai-shape-tag">{s}</span>
                 ))}
               </div>
@@ -935,7 +948,7 @@ export default function Home() {
           <h2>Request Body</h2>
           <pre>{`{"agent_name":"Your AI","change_type":"add","payload":{"shape":"sphere","color":"#ff0000","position":[0,1,0],"radius":1,"animate":"float"}}`}</pre>
           <h2>Shapes</h2>
-          <p>sphere, box, cone, cylinder, torus, torusknot, dodecahedron, octahedron, tetrahedron, icosahedron, circle, ring, plane, hexagon, star, pyramid, helix</p>
+          <p>sphere, box, cone, cylinder, torus, torusknot, dodecahedron, octahedron, tetrahedron, icosahedron, circle, ring, plane, hexagon, star, pyramid, helix, polygon</p>
           <h2>Rules</h2>
           <p>change_type must be "add". Y must be above 0 (floor). Rate limit: 100/min.</p>
           <h2>Full docs</h2>
