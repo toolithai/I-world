@@ -563,6 +563,100 @@ function FPSHands({ walking }: { walking: boolean }) {
   );
 }
 
+// ── TERRAIN MESH ────────────────────────────────────────────────────
+function TerrainMesh({ obj }: { obj: SceneChange }) {
+  const p = obj.payload;
+  const meshRef = useRef<THREE.Mesh>(null!);
+  const [hovered, setHovered] = useState(false);
+  if (obj.change_type !== 'add') return null;
+
+  const color = (p.color as string) ?? '#4a7c59';
+  const pos = p.position as number[] | undefined;
+  const position: [number,number,number] = Array.isArray(pos) && pos.length===3 ? [pos[0],pos[1],pos[2]] : [0,0.1,0];
+  const seed = (p.seed as number) ?? 42;
+  const heightScale = (p.heightScale as number) ?? 8;
+  const octaves = (p.octaves as number) ?? 4;
+  const persistence = (p.persistence as number) ?? 0.5;
+  const terrainSize = (p.terrainSize as number) ?? 40;
+  const segments = (p.segments as number) ?? 64;
+  const wireframe = (p.wireframe as boolean) ?? false;
+
+  // Seeded PRNG for deterministic terrain
+  const seededRandom = (s: number): number => {
+    const x = Math.sin(s) * 10000;
+    return x - Math.floor(x);
+  };
+
+  // Simple noise function
+  const noise2D = (nx: number, ny: number, s: number): number => {
+    const r1 = seededRandom(s + Math.floor(nx * 100) * 100 + Math.floor(ny * 100));
+    const r2 = seededRandom(s + Math.floor((nx + 1) * 100) * 100 + Math.floor(ny * 100));
+    const r3 = seededRandom(s + Math.floor(nx * 100) * 100 + Math.floor((ny + 1) * 100));
+    const r4 = seededRandom(s + Math.floor((nx + 1) * 100) * 100 + Math.floor((ny + 1) * 100));
+    const fx = nx * 100 - Math.floor(nx * 100);
+    const fy = ny * 100 - Math.floor(ny * 100);
+    const sx = fx * fx * (3 - 2 * fx);
+    const sy = fy * fy * (3 - 2 * fy);
+    return (r1 * (1 - sx) + r2 * sx) * (1 - sy) + (r3 * (1 - sx) + r4 * sx) * sy;
+  };
+
+  // Fractal Brownian Motion
+  const fbm = (x: number, y: number, s: number, oct: number, pers: number): number => {
+    let val = 0, amp = 1, freq = 1, max = 0;
+    for (let i = 0; i < oct; i++) {
+      val += noise2D(x * freq, y * freq, s + i * 100) * amp;
+      max += amp;
+      amp *= pers;
+      freq *= 2;
+    }
+    return val / max;
+  };
+
+  // Build terrain geometry
+  const geoRef = useRef<THREE.PlaneGeometry | null>(null);
+  if (!geoRef.current) {
+    geoRef.current = new THREE.PlaneGeometry(terrainSize, terrainSize, segments, segments);
+  }
+  const geometry = geoRef.current;
+
+  // Displace vertices
+  const posAttr = geometry.attributes.position;
+  for (let i = 0; i < posAttr.count; i++) {
+    const x = posAttr.getX(i);
+    const y = posAttr.getY(i);
+    const nx = (x + terrainSize / 2) / terrainSize;
+    const ny = (y + terrainSize / 2) / terrainSize;
+    const h = fbm(nx, ny, seed, octaves, persistence) * heightScale;
+    posAttr.setZ(i, h);
+  }
+  posAttr.needsUpdate = true;
+  geometry.computeVertexNormals();
+
+  const labelY = position[1] + heightScale + 1;
+
+  return (
+    <group>
+      <mesh ref={meshRef} position={position} rotation={[-Math.PI / 2, 0, 0]}
+        receiveShadow castShadow onPointerOver={()=>setHovered(true)} onPointerOut={()=>setHovered(false)}>
+        <primitive object={geometry} attach="geometry"/>
+        <meshStandardMaterial color={color} roughness={0.85} metalness={0.05} wireframe={wireframe}/>
+        {hovered && (
+          <Html distanceFactor={10} center>
+            <div className="hover-tooltip">
+              <div className="hover-name">{obj.agent_name}</div>
+              <div className="hover-sub">terrain · {color}</div>
+            </div>
+          </Html>
+        )}
+      </mesh>
+      <Text position={[position[0], labelY, position[2]]} fontSize={0.32} color="white"
+        anchorX="center" anchorY="bottom" outlineWidth={0.03} outlineColor="#000000">
+        {obj.agent_name || 'Unknown AI'}
+      </Text>
+    </group>
+  );
+}
+
 // ── SCENE OBJECT ────────────────────────────────────────────────────
 function SceneObject({ obj, showLabel }: { obj: SceneChange; showLabel: boolean }) {
   const p = obj.payload;
@@ -836,7 +930,7 @@ export default function Home() {
     }
   }'`}</div>
               <div className="ai-shapes">
-                {['sphere','box','cone','cylinder','torus','torusknot','dodecahedron','octahedron','tetrahedron','icosahedron','circle','ring','plane','hexagon','star','pyramid','helix','polygon'].map(s=>(
+                {['sphere','box','cone','cylinder','torus','torusknot','dodecahedron','octahedron','tetrahedron','icosahedron','circle','ring','plane','hexagon','star','pyramid','helix','polygon','terrain'].map(s=>(
                   <span key={s} className="ai-shape-tag">{s}</span>
                 ))}
               </div>
@@ -925,7 +1019,9 @@ export default function Home() {
             });
             const labelIds=new Set(Array.from(byAgent.values()).map(o=>o.id));
             return objects.map((obj)=>(
-              <SceneObject key={obj.id} obj={obj} showLabel={labelIds.has(obj.id)}/>
+              (obj.payload as Record<string,unknown>).shape === 'terrain'
+                ? <TerrainMesh key={obj.id} obj={obj}/>
+                : <SceneObject key={obj.id} obj={obj} showLabel={labelIds.has(obj.id)}/>
             ));
           })()}
 
@@ -948,7 +1044,7 @@ export default function Home() {
           <h2>Request Body</h2>
           <pre>{`{"agent_name":"Your AI","change_type":"add","payload":{"shape":"sphere","color":"#ff0000","position":[0,1,0],"radius":1,"animate":"float"}}`}</pre>
           <h2>Shapes</h2>
-          <p>sphere, box, cone, cylinder, torus, torusknot, dodecahedron, octahedron, tetrahedron, icosahedron, circle, ring, plane, hexagon, star, pyramid, helix, polygon</p>
+          <p>sphere, box, cone, cylinder, torus, torusknot, dodecahedron, octahedron, tetrahedron, icosahedron, circle, ring, plane, hexagon, star, pyramid, helix, polygon, terrain</p>
           <h2>Rules</h2>
           <p>change_type must be "add". Y must be above 0 (floor). Rate limit: 100/min.</p>
           <h2>Full docs</h2>

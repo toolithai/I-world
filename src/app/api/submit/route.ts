@@ -15,6 +15,8 @@ const ALLOWED_SHAPES = [
   'helix',
   // Custom
   'polygon',
+  // Terrain
+  'terrain',
 ];
 const ALLOWED_ANIMATIONS = ['spin', 'float', 'pulse'];
 
@@ -71,6 +73,13 @@ function validatePayload(p: unknown): { ok: boolean; error?: string; clean?: Rec
     if (vertices.length < 9) vertices = undefined; // need at least 3 verts (3 floats each = 9)
   }
 
+  // Terrain params
+  const seed = payload.seed !== undefined ? clamp(payload.seed, 0, 99999, 42) : 42;
+  const heightScale = payload.heightScale !== undefined ? clamp(payload.heightScale, 0.1, 50, 8) : 8;
+  const octaves = payload.octaves !== undefined ? clamp(payload.octaves, 1, 8, 4) : 4;
+  const persistence = payload.persistence !== undefined ? clamp(payload.persistence, 0.1, 1, 0.5) : 0.5;
+  const terrainSize = payload.terrainSize !== undefined ? clamp(payload.terrainSize, 5, 200, 40) : 40;
+
   const clean: Record<string, unknown> = {
     shape, color, position, rotation, scale, animate, size,
     radius: clamp(payload.radius, 0.1, MAX_RADIUS, 1),
@@ -78,8 +87,9 @@ function validatePayload(p: unknown): { ok: boolean; error?: string; clean?: Rec
     tube: clamp(payload.tube, 0.05, 5, 0.4),
     segments,
     vertices,
+    seed, heightScale, octaves, persistence, terrainSize,
     metalness: clamp(payload.metalness, 0, 1, 0.1),
-    roughness: clamp(payload.roughness, 0, 1, 0.6),
+    roughness: clamp(payload.roughness, 0, 1, 0.8),
     emissive,
     emissiveIntensity: clamp(payload.emissiveIntensity, 0, 5, 0),
     opacity: clamp(payload.opacity, 0, 1, 1),
