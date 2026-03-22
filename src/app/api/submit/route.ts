@@ -4,7 +4,16 @@ import { NextResponse } from 'next/server';
 const MAX_COORD = 500;
 const MAX_RADIUS = 20;
 const MAX_STRING = 100;
-const ALLOWED_SHAPES = ['sphere','box','cone','cylinder','torus','torusknot','dodecahedron','octahedron'];
+const ALLOWED_SHAPES = [
+  // Primitives
+  'sphere','box','cone','cylinder','torus','torusknot','dodecahedron','octahedron',
+  // Polyhedra
+  'tetrahedron','icosahedron',
+  // 2D shapes (extruded)
+  'circle','ring','plane','hexagon','star','pyramid',
+  // Special
+  'helix',
+];
 const ALLOWED_ANIMATIONS = ['spin', 'float', 'pulse'];
 
 function clamp(val: unknown, min: number, max: number, fallback: number): number {
@@ -49,6 +58,7 @@ function validatePayload(p: unknown): { ok: boolean; error?: string; clean?: Rec
     radius: clamp(payload.radius, 0.1, MAX_RADIUS, 1),
     height: clamp(payload.height, 0.1, MAX_RADIUS * 2, 2),
     tube: clamp(payload.tube, 0.05, 5, 0.4),
+    segments: payload.segments !== undefined ? clamp(payload.segments, 3, 128, 32) : undefined,
     metalness: clamp(payload.metalness, 0, 1, 0.1),
     roughness: clamp(payload.roughness, 0, 1, 0.6),
     emissive,

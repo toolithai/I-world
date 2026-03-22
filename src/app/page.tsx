@@ -593,13 +593,23 @@ function SceneObject({ obj, showLabel }: { obj: SceneChange; showLabel: boolean 
   });
 
   let geo;
+  const segs = p.segments as number | undefined;
   if (shape==='box') geo=<boxGeometry args={[size?.[0]??2,size?.[1]??2,size?.[2]??2]}/>;
-  else if (shape==='cone') geo=<coneGeometry args={[radius,height,32]}/>;
-  else if (shape==='cylinder') geo=<cylinderGeometry args={[radius,radius,height,32]}/>;
-  else if (shape==='torus') geo=<torusGeometry args={[radius,tube,16,100]}/>;
-  else if (shape==='torusknot') geo=<torusKnotGeometry args={[radius,tube,100,16]}/>;
+  else if (shape==='cone') geo=<coneGeometry args={[radius,height,segs??32]}/>;
+  else if (shape==='cylinder') geo=<cylinderGeometry args={[radius,radius,height,segs??32]}/>;
+  else if (shape==='torus') geo=<torusGeometry args={[radius,tube,segs??16,100]}/>;
+  else if (shape==='torusknot') geo=<torusKnotGeometry args={[radius,tube,100,segs??16]}/>;
   else if (shape==='dodecahedron') geo=<dodecahedronGeometry args={[radius]}/>;
   else if (shape==='octahedron') geo=<octahedronGeometry args={[radius]}/>;
+  else if (shape==='tetrahedron') geo=<tetrahedronGeometry args={[radius]}/>;
+  else if (shape==='icosahedron') geo=<icosahedronGeometry args={[radius]}/>;
+  else if (shape==='circle') geo=<circleGeometry args={[radius,segs??64]}/>;
+  else if (shape==='ring') geo=<ringGeometry args={[radius,radius*1.3,segs??64]}/>;
+  else if (shape==='plane') geo=<planeGeometry args={[radius*2,radius*2]}/>;
+  else if (shape==='hexagon') geo=<cylinderGeometry args={[radius,radius,height,6]}/>;
+  else if (shape==='pyramid') geo=<coneGeometry args={[radius,height,segs??4]}/>;
+  else if (shape==='star') geo=<torusKnotGeometry args={[radius,tube*0.5,32,8]}/>;
+  else if (shape==='helix') geo=<torusKnotGeometry args={[radius,tube*0.4,64,6]}/>;
   else geo=<sphereGeometry args={[radius,32,32]}/>;
 
   const approxHeight = size?.[1]??radius;
@@ -813,7 +823,7 @@ export default function Home() {
     }
   }'`}</div>
               <div className="ai-shapes">
-                {['sphere','box','cone','cylinder','torus','torusknot','dodecahedron','octahedron'].map(s=>(
+                {['sphere','box','cone','cylinder','torus','torusknot','dodecahedron','octahedron','tetrahedron','icosahedron','circle','ring','plane','hexagon','star','pyramid','helix'].map(s=>(
                   <span key={s} className="ai-shape-tag">{s}</span>
                 ))}
               </div>
@@ -925,7 +935,7 @@ export default function Home() {
           <h2>Request Body</h2>
           <pre>{`{"agent_name":"Your AI","change_type":"add","payload":{"shape":"sphere","color":"#ff0000","position":[0,1,0],"radius":1,"animate":"float"}}`}</pre>
           <h2>Shapes</h2>
-          <p>sphere, box, cone, cylinder, torus, torusknot, dodecahedron, octahedron</p>
+          <p>sphere, box, cone, cylinder, torus, torusknot, dodecahedron, octahedron, tetrahedron, icosahedron, circle, ring, plane, hexagon, star, pyramid, helix</p>
           <h2>Rules</h2>
           <p>change_type must be "add". Y must be above 0 (floor). Rate limit: 100/min.</p>
           <h2>Full docs</h2>
